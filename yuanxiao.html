@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport"/>
+    <title>Title</title>
+    <link rel="stylesheet" href="libs/css/reset.css">
+    <style>
+        html, body, #wrap {
+            width: 100%;
+            height: 100%;
+        }
+
+        #wrap {
+            position: relative;
+        }
+
+        #top {
+            width: 100%;
+            height: 75%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: darkred;
+        }
+
+        #bottom {
+            width: 100%;
+            height: 25%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: orange;
+        }
+
+        #downTime {
+            display: block;
+            font-size: 30px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            color: white;
+        }
+
+        /*随机生成的元宵*/
+        .yuanXiao {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            position: absolute;
+        }
+
+        /*移动的元宵*/
+        .moveYuan {
+            background: white;
+        }
+
+        /*手按住的拖动元宵*/
+        .handleYuan {
+            background: blue;
+        }
+
+        /*跑到最左边的元宵*/
+        .leftYuan {
+            background: pink;
+        }
+
+        /*放到碗里的元宵*/
+        .cupYuan {
+            background: gold;
+        }
+    </style>
+</head>
+<body>
+<div id="wrap">
+    <!--汤圆活动的范围-->
+    <div id="top">
+        <!--倒计时-->
+        <div id="downTime"></div>
+    </div>
+    <!--存放被抓到的汤圆-->
+    <div id="bottom">
+
+    </div>
+</div>
+</body>
+<script src="libs/js/jquery-3.1.1.js"></script>
+<script>
+    window.onload = function () {
+        // DOM元素
+        let wrapDom = document.getElementById('wrap');
+        let downTimeDom = document.getElementById('downTime');
+        let topDom = document.getElementById('top');
+        let bottomDom = document.getElementById('bottom');
+        // 倒计时
+        let downTime = 30;
+        // 元宵的速度
+        let yuanSpeed = {
+            0: 0.3,
+            1: 0.5,
+            2: 0.7,
+            3: 0.9,
+            4: 1.1,
+        };
+        const {innerWidth, innerHeight} = window;
+
+        createYuan();
+
+        /**
+         * 初始化生成的元宵
+         * X坐标 最右侧
+         * Y坐标 20 - 70 之间
+         * 元宵移动
+         * */
+        function initYuan() {
+            let yuanRight = 0;  // 元宵初始值right
+            let yuanInitSpeed = yuanSpeed[randNum(0, 4)];
+            let yuan = document.createElement('div');
+            yuan.x = innerWidth;
+            yuan.y = randNum(0, innerHeight - 200 - yuan.width);
+            yuan.className = 'yuanXiao';
+            yuan.classList.add('moveYuan');
+            // 元宵初始值top
+            yuan.style.top = randNum(1, 7) * 10 + '%';
+            yuan.style.right = '0';
+            topDom.appendChild(yuan);
+            let initTimer = setInterval(function () {
+                // 小球移动
+                yuanRight += yuanInitSpeed;
+                yuan.style.right = yuanRight + 'px';
+                // 某个元宵移动到最左边，就移除该元宵，并结束它的移动定时器
+                if (yuanRight >= top.innerWidth) {
+                    yuan.remove();
+                    clearInterval(initTimer);
+                }
+            }, 1);
+        }
+
+        /**
+         * 300ms生成一个元宵
+         * 并实现定时器
+         * */
+        function createYuan() {
+            let initTime = 30000;
+            let createTimer = setInterval(function () {
+                // 等价于过了一秒才执行倒计时
+                if (initTime % 1000 === 0) {
+                    // 时间倒计时
+                    downTime -= 1;
+                    downTimeDom.innerText = downTime;
+                    // 倒计时结束，停止定时器
+                    if (downTime <= 0) {
+                        clearInterval(createTimer);
+                    }
+                }
+                initTime -= 500;
+                initYuan();
+            }, 500);
+        }
+
+        // 随机数
+        function randNum(min, max) {
+            return Math.floor(Math.random() * (max - min + 1) + min);
+        }
+
+
+        //  猫的位置
+        function yuanPosition(yuan) {
+            yuan.style.transform = `translate(${yuan.x}px,${yuan.y}px)`;
+        }
+
+        //  触摸的对象
+        let touchTarget = null;
+        // 事件监听
+        window.addEventListener('touchstart', function (e) {
+            const target = e.target;
+            const {isLive} = target;
+            if (!isLive) {
+                return;
+            }
+            touchTarget = target;
+            touchTarget.classList.remove('moveYuan');
+            touchTarget.classList.add('handleYuan');
+            // 记录第一次点击到元宵的坐标位置
+            const {clientX, clientY} = e.targetTouches[0];
+            touchTarget.diffX = clientX - target.x;
+            touchTarget.diffY = clientY - target.y;
+            touchTarget.isTouch = true;
+        });
+
+        window.addEventListener('touchmove', function (e) {
+            if (!touchTarget || !touchTarget.isTouch) {
+                return;
+            }
+            const {clientX, clientY} = e.targetTouches[0];
+            const {diffX, diffY} = touchTarget;
+            touchTarget.x = clientX - diffX;
+            touchTarget.y = clientY - diffY;
+            yuanPosition(touchTarget);
+        });
+
+        window.addEventListener('touchend', function (e) {
+            if (!touchTarget || !touchTarget.isTouch) {
+                return;
+            }
+            //  如果放置到碗里
+            if (touchTarget.y > innerHeight - 200 - touchTarget.width) {
+                // const index = catList.indexOf(touchTarget);
+                // catList.splice(index, 1);
+                touchTarget.classList.add('cupYuan');
+                touchTarget.isCatch = true;
+                // catchList.push(touchTarget);
+                touchTarget.y = Math.max(touchTarget.y, innerHeight - 200);
+                touchTarget.y = Math.min(touchTarget.y, innerHeight - touchTarget.width);
+                yuanPosition(touchTarget);
+            }
+            touchTarget.isTouch = false;
+            touchTarget.classList.remove('moveYuan');
+            touchTarget = null;
+        });
+    };
+
+
+    // 禁止微信内置浏览器下拉页面
+    document.body.addEventListener('touchmove', function (e) {
+        e.preventDefault(); //阻止默认的处理方式(阻止下拉滑动的效果)
+    }, {passive: false}); //passive 参数不能省略，用来兼容ios和android
+</script>
+</html>
